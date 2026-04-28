@@ -177,6 +177,86 @@ async def test_same_transmitter_different_code_is_allowed(
     assert result["result"].unique_id == f"{entity_entry.id}_5"
 
 
+async def test_reconfigure_updates_entry(
+    hass: HomeAssistant,
+    mock_get_codes: MagicMock,
+    init_novy_cooker_hood: MockConfigEntry,
+    mock_rf_entity: MockRadioFrequencyEntity,
+) -> None:
+    """Reconfigure can change the code on an existing entry."""
+    result = await init_novy_cooker_hood.start_reconfigure_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+
+    # Submit a new code on the same transmitter.
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_TRANSMITTER: TRANSMITTER_ENTITY_ID,
+            CONF_CODE: "4",
+        },
+    )
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "test_light"
+    mock_get_codes.async_load_command.assert_awaited_with(COMMAND_LIGHT)
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"next_step_id": "finish"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert init_novy_cooker_hood.data[CONF_CODE] == 4
+
+
+async def test_reconfigure_aborts_on_collision(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_rf_entity: MockRadioFrequencyEntity,
+    entity_registry: er.EntityRegistry,
+) -> None:
+    """Reconfigure aborts when the new (transmitter, code) is already used."""
+    # First entry: code 1 (already in mock_config_entry).
+    mock_config_entry.add_to_hass(hass)
+    # Second entry: code 9 — the one we'll try to reconfigure to code 1.
+    entity_entry = entity_registry.async_get(TRANSMITTER_ENTITY_ID)
+    other = MockConfigEntry(
+        domain=DOMAIN,
+        title="Novy Cooker Hood",
+        data={CONF_TRANSMITTER: entity_entry.id, CONF_CODE: 9},
+        unique_id=f"{entity_entry.id}_9",
+    )
+    other.add_to_hass(hass)
+
+    result = await other.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={CONF_TRANSMITTER: TRANSMITTER_ENTITY_ID, CONF_CODE: "1"},
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_reconfigure_retry_returns_to_picker(
+    hass: HomeAssistant,
+    mock_get_codes: MagicMock,
+    init_novy_cooker_hood: MockConfigEntry,
+    mock_rf_entity: MockRadioFrequencyEntity,
+) -> None:
+    """Picking Retry from the test menu during reconfigure shows the reconfigure form."""
+    result = await init_novy_cooker_hood.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={CONF_TRANSMITTER: TRANSMITTER_ENTITY_ID, CONF_CODE: "2"},
+    )
+    assert result["type"] is FlowResultType.MENU
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"next_step_id": "retry"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+
+
 async def test_no_transmitters(hass: HomeAssistant) -> None:
     """Test the flow aborts when no RF transmitters are registered at all."""
     result = await hass.config_entries.flow.async_init(
