@@ -182,6 +182,7 @@ async def test_reconfigure_updates_entry(
     mock_get_codes: MagicMock,
     init_novy_cooker_hood: MockConfigEntry,
     mock_rf_entity: MockRadioFrequencyEntity,
+    entity_registry: er.EntityRegistry,
 ) -> None:
     """Reconfigure can change the code on an existing entry."""
     result = await init_novy_cooker_hood.start_reconfigure_flow(hass)
@@ -206,6 +207,35 @@ async def test_reconfigure_updates_entry(
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
     assert init_novy_cooker_hood.data[CONF_CODE] == 4
+    entity_entry = entity_registry.async_get(TRANSMITTER_ENTITY_ID)
+    assert init_novy_cooker_hood.unique_id == f"{entity_entry.id}_4"
+
+
+async def test_reconfigure_frees_old_unique_id(
+    hass: HomeAssistant,
+    mock_get_codes: MagicMock,
+    init_novy_cooker_hood: MockConfigEntry,
+    mock_rf_entity: MockRadioFrequencyEntity,
+) -> None:
+    """After reconfigure, the previous (transmitter, code) can be reused."""
+    # Reconfigure away from code 1.
+    result = await init_novy_cooker_hood.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={CONF_TRANSMITTER: TRANSMITTER_ENTITY_ID, CONF_CODE: "4"},
+    )
+    await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"next_step_id": "finish"}
+    )
+
+    # Adding a new entry on the freed (transmitter, code 1) should now work.
+    result = await _start_user_flow(hass, code="1")
+    assert result["type"] is FlowResultType.MENU
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"next_step_id": "finish"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_CODE] == 1
 
 
 async def test_reconfigure_aborts_on_collision(

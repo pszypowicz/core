@@ -56,7 +56,7 @@ class NovyCookerHoodConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Pick a transmitter and code to update an existing entry."""
-        if user_input is None:
+        if user_input is None and self._transmitter_entity_id is None:
             entry = self._get_reconfigure_entry()
             transmitter = er.async_get(self.hass).async_get(
                 entry.data[CONF_TRANSMITTER]
@@ -166,5 +166,6 @@ class NovyCookerHoodConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_update_reload_and_abort(
                 self._get_reconfigure_entry(),
                 data_updates=data,
+                unique_id=f"{self._transmitter_id}_{self._code}",
             )
         return self.async_create_entry(title="Novy Cooker Hood", data=data)
