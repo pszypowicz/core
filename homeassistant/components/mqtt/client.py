@@ -1191,7 +1191,6 @@ class MQTT:
         if self.is_mqttv5:
             # We do not add an subscription identifier to simple subscriptions
             # We assigned a value of 1 to allow it match
-            identifier = 1
             if msg.properties is not None and hasattr(
                 msg.properties, "SubscriptionIdentifier"
             ):
