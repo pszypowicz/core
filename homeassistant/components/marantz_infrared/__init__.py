@@ -6,7 +6,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-PLATFORMS = [Platform.MEDIA_PLAYER]
+PLATFORMS = [Platform.BUTTON, Platform.MEDIA_PLAYER]
 
 
 @dataclass
@@ -16,7 +16,7 @@ class MarantzIrRuntimeData:
     The RC-5 toggle bit must alternate between distinct key presses so
     the receiver can distinguish a new press from a held-down repeat.
     The toggle is tracked at the device level (one value per config
-    entry) so all entities of a config entry share it.
+    entry) so all entities — buttons and the media player — share it.
     """
 
     toggle: int = 0
