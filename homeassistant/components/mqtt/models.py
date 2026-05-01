@@ -437,7 +437,7 @@ class MqttData:
     state_write_requests: EntityTopicState = field(default_factory=EntityTopicState)
     subscriptions_to_restore: set[Subscription] = field(default_factory=set)
     tags: dict[str, dict[str, MQTTTagScanner]] = field(default_factory=dict)
-    subscription_id_generator: SubscriptionID = SubscriptionID()
+    subscription_id_generator: SubscriptionID = field(default_factory=SubscriptionID)
 
 
 @dataclass(slots=True)

@@ -113,7 +113,6 @@ TIMEOUT_ACK = 10
 SUBSCRIBE_TIMEOUT = 10
 RECONNECT_INTERVAL_SECONDS = 10
 
-MAX_WILDCARD_SUBSCRIBES_PER_CALL = 1
 MAX_SUBSCRIBES_PER_CALL = 500
 MAX_UNSUBSCRIBES_PER_CALL = 500
 
@@ -706,6 +705,7 @@ class MQTT:
         result: int | None = None
         self._available_future = client_available
         self._should_reconnect = True
+        self._registered_subscriptions.clear()
         connect_partial = partial(
             self._mqttc.connect,
             host=self.conf[CONF_BROKER],
@@ -994,17 +994,28 @@ class MQTT:
         subscribe_chain = chunked_or_all(
             pending_subscriptions.items(), MAX_SUBSCRIBES_PER_CALL
         )
+        if self.is_mqttv5 and pending_subscriptions:
+            bulk_properties = mqtt.Properties(packetType=mqtt.PacketTypes.SUBSCRIBE)  # type: ignore[no-untyped-call]
+            bulk_properties.SubscriptionIdentifier = 1
+        else:
+            bulk_properties = None
 
         self._pending_subscriptions = {}
 
         for topic, qos in pending_wildcard_subscriptions.items():
             if self.is_mqttv5:
                 properties = mqtt.Properties(packetType=mqtt.PacketTypes.SUBSCRIBE)  # type: ignore[no-untyped-call]
-                properties.SubscriptionIdentifier = self._registered_subscriptions[
-                    topic
-                ]
+                try:
+                    properties.SubscriptionIdentifier = self._registered_subscriptions[
+                        topic
+                    ]
+                except KeyError:
+                    properties.SubscriptionIdentifier = self._registered_subscriptions[
+                        topic
+                    ] = self._mqtt_data.subscription_id_generator.generate()
             else:
                 properties = None
+
             result, mid = self._mqttc.subscribe(topic, qos, properties=properties)
             if debug_enabled:
                 _LOGGER.debug(
@@ -1026,7 +1037,7 @@ class MQTT:
             if not chunk_list:
                 continue
 
-            result, mid = self._mqttc.subscribe(chunk_list)
+            result, mid = self._mqttc.subscribe(chunk_list, properties=bulk_properties)
 
             if debug_enabled:
                 _LOGGER.debug(
@@ -1208,13 +1219,14 @@ class MQTT:
             identifier,
             msg.payload[0:8192],
         )
-        subscriptions = self._matching_subscriptions(topic)
+        subscriptions = [
+            subscription
+            for subscription in self._matching_subscriptions(topic)
+            if identifier is None or identifier == subscription.subscription_id
+        ]
         msg_cache_by_subscription_topic: dict[str, ReceiveMessage] = {}
 
         for subscription in subscriptions:
-            # Skip the message if it is not linked to the subscription
-            if identifier and identifier != subscription.subscription_id:
-                continue
             if msg.retain:
                 retained_topics = self._retained_topics[subscription]
                 # Skip if the subscription already received a retained message

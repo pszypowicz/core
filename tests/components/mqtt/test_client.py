@@ -1043,16 +1043,16 @@ async def test_unsubscribe_race(
     # We allow either calls [subscribe, unsubscribe, subscribe], [subscribe, subscribe] or
     # when both subscriptions were combined [subscribe]
     expected_calls_1 = [
-        call.subscribe([("test/state", 0)]),
+        call.subscribe([("test/state", 0)], properties=None),
         call.unsubscribe("test/state"),
-        call.subscribe([("test/state", 0)]),
+        call.subscribe([("test/state", 0)], properties=None),
     ]
     expected_calls_2 = [
-        call.subscribe([("test/state", 0)]),
-        call.subscribe([("test/state", 0)]),
+        call.subscribe([("test/state", 0)], properties=None),
+        call.subscribe([("test/state", 0)], properties=None),
     ]
     expected_calls_3 = [
-        call.subscribe([("test/state", 0)]),
+        call.subscribe([("test/state", 0)], properties=None),
     ]
     assert mqtt_client_mock.mock_calls in (
         expected_calls_1,
@@ -1120,7 +1120,7 @@ async def test_restore_all_active_subscriptions_on_reconnect(
 
     # the subscription with the highest QoS should survive
     expected = [
-        call([("test/state", 2)]),
+        call([("test/state", 2)], properties=None),
     ]
     assert mqtt_client_mock.subscribe.mock_calls == expected
 
@@ -1134,7 +1134,7 @@ async def test_restore_all_active_subscriptions_on_reconnect(
     # wait for cooldown
     await mock_debouncer.wait()
 
-    expected.append(call([("test/state", 1)]))
+    expected.append(call([("test/state", 1)], properties=None))
     for expected_call in expected:
         assert mqtt_client_mock.subscribe.hass_call(expected_call)
 
@@ -1328,7 +1328,7 @@ async def test_subscribe_error(
     mqtt_client_mock = setup_with_birth_msg_client_mock
     mqtt_client_mock.reset_mock()
     # simulate client is not connected error before subscribing
-    mqtt_client_mock.subscribe.side_effect = lambda *args: (4, None)
+    mqtt_client_mock.subscribe.side_effect = lambda *args, **kwargs: (4, 0)
     await mqtt.async_subscribe(hass, "some-topic", record_calls)
     while mqtt_client_mock.subscribe.call_count == 0:
         await hass.async_block_till_done()
