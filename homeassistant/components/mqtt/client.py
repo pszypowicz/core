@@ -1218,14 +1218,13 @@ class MQTT:
             identifiers,
             msg.payload[0:8192],
         )
-        subscriptions = [
+        msg_cache_by_subscription_topic: dict[str, ReceiveMessage] = {}
+
+        for subscription in [
             subscription
             for subscription in self._matching_subscriptions(topic)
             if identifiers is None or subscription.subscription_id in identifiers
-        ]
-        msg_cache_by_subscription_topic: dict[str, ReceiveMessage] = {}
-
-        for subscription in subscriptions:
+        ]:
             if msg.retain:
                 retained_topics = self._retained_topics[subscription]
                 # Skip if the subscription already received a retained message
