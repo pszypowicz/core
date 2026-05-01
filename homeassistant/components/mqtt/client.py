@@ -1187,14 +1187,14 @@ class MQTT:
     def _async_mqtt_on_message(
         self, _mqttc: mqtt.Client, _userdata: None, msg: mqtt.MQTTMessage
     ) -> None:
-        identifier: int | None = None
+        identifiers: list[int] | None = None
         if self.is_mqttv5:
             # We do not add an subscription identifier to simple subscriptions
             # We assigned a value of 1 to allow it match
             if msg.properties is not None and hasattr(
                 msg.properties, "SubscriptionIdentifier"
             ):
-                identifier = msg.properties.SubscriptionIdentifier[0]
+                identifiers = msg.properties.SubscriptionIdentifier
         try:
             # msg.topic is a property that decodes the topic to a string
             # every time it is accessed. Save the result to avoid
@@ -1211,17 +1211,17 @@ class MQTT:
             )
             return
         _LOGGER.debug(
-            "Received%s message on %s (qos=%s) ID=%s: %s",
+            "Received%s message on %s (qos=%s) IDs=%s: %s",
             " retained" if msg.retain else "",
             topic,
             msg.qos,
-            identifier,
+            identifiers,
             msg.payload[0:8192],
         )
         subscriptions = [
             subscription
             for subscription in self._matching_subscriptions(topic)
-            if identifier is None or identifier == subscription.subscription_id
+            if identifiers is None or subscription.subscription_id in identifiers
         ]
         msg_cache_by_subscription_topic: dict[str, ReceiveMessage] = {}
 
