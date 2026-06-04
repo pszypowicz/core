@@ -1,7 +1,15 @@
-"""Constants for Ampio Air Quality platform."""
+"""Constants for the Ampio integration."""
 
-from datetime import timedelta
 from typing import Final
 
-CONF_STATION_ID: Final = "station_id"
-SCAN_INTERVAL: Final = timedelta(minutes=10)
+from homeassistant.const import Platform
+
+DOMAIN: Final = "ampio"
+
+PLATFORMS: Final = [Platform.SENSOR]
+
+DEFAULT_PORT: Final = 1883
+
+DEFAULT_HOST: Final = "ampio.local"
+
+DISCOVER_TIMEOUT: Final = 1.5

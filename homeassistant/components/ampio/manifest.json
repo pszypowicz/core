@@ -1,10 +1,18 @@
 {
   "domain": "ampio",
-  "name": "Ampio Smart Smog System",
-  "codeowners": [],
+  "name": "Ampio",
+  "after_dependencies": ["zeroconf"],
+  "codeowners": ["@pszypowicz"],
+  "config_flow": true,
+  "dhcp": [
+    {
+      "hostname": "ampio"
+    }
+  ],
   "documentation": "https://www.home-assistant.io/integrations/ampio",
-  "iot_class": "cloud_polling",
-  "loggers": ["asmog"],
-  "quality_scale": "legacy",
-  "requirements": ["asmog==0.0.6"]
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "loggers": ["ampio_mqtt"],
+  "quality_scale": "silver",
+  "requirements": ["ampio-mqtt==0.6.0"]
 }

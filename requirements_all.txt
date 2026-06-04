@@ -500,6 +500,9 @@ amberelectric==2.0.12
 # homeassistant.components.amcrest
 amcrest==1.9.9
 
+# homeassistant.components.ampio
+ampio-mqtt==0.6.0
+
 # homeassistant.components.androidtv
 androidtv[async]==0.0.75
 
@@ -544,9 +547,6 @@ arcam-fmj==1.8.3
 
 # homeassistant.components.arris_tg2492lg
 arris-tg2492lg==2.2.0
-
-# homeassistant.components.ampio
-asmog==0.0.6
 
 # homeassistant.components.asuswrt
 asusrouter==1.21.3
